@@ -60,6 +60,7 @@ void SetupRC()
 	GLfloat ambientLight[]={0.3, 0.3, 0.3, 1.0};
 	GLfloat diffuseLight[]={0.7, 0.7, 0.7, 1.0};
 	GLfloat specular[]={1.0, 1.0, 1.0, 1.0};
+	GLfloat specref[]={1.0, 1.0, 1.0, 1.0};
 	GLfloat lightPos[]={0.0, 0.0, 75.0, 1.0};
 	glEnable(GL_LIGHTING);
 	glLightfv(GL_LIGHT0,GL_AMBIENT,ambientLight);
@@ -67,6 +68,11 @@ void SetupRC()
 	glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
 	glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
 	glEnable(GL_LIGHT0);
+	
+	glEnable(GL_COLOR_MATERIAL);
+	glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
+	glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
+	glMateriali(GL_FRONT,GL_SHININESS,128);
 
 }
 
@@ -102,7 +108,9 @@ void RenderScene()
 	int totalfacet=0, totalvertex=0;
 	int plutonium;
 	FILE* givenfile;
-	givenfile = fopen ("anulus.stl","r");
+	givenfile = fopen("coin_cargo.stl","r"); // The file you want to see. Currently it should be at the same
+	// folder with main.cpp. The file location depends on system spec.
+	/*givenfile = fopen ("anulus.stl","r");*/
 	/*givenfile = fopen ("SmallGear.stl","r");*/
 	/*givenfile = fopen ("handle.stl","r");*/
 	/*givenfile = fopen ("crank.stl","r");*/
@@ -167,7 +175,7 @@ void RenderScene()
 	glPushMatrix();
 	float xRot=45.0, yRot=45.0, zRot=45.0;
 	glRotatef(xRot, 1.0, 0.0, 0.0);
-	glRotatef(spin, 0.0, 1.0, 0.0);
+	glRotatef(spin, 0.0, 1.0, 0.0); // Somehow this spin valiable doesn't work.
 	glRotatef(zRot, 0.0, 0.0, 1.0);
 	
 	int groupsize=9;
