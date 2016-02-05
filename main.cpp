@@ -121,6 +121,7 @@ public:
         }
 
         fscanf(myF, "%s %s", linefromstandard, nameoffile);
+        cout << linefromstandard <<" "<< nameoffile << endl;
 
         while((char) fgetc(myF)!='e')
         {
@@ -145,9 +146,16 @@ public:
             fscanf(myF, "%s", linefromstandard);
             fscanf(myF, "%s", linefromstandard);
 
+            fgetc(myF);
             if ((char) fgetc(myF)=='e')
             {
-                break;
+                // end of solid
+                fscanf(myF, "%s %s", linefromstandard, nameoffile);
+                //cout << linefromstandard <<" "<< nameoffile << endl;
+
+                // new solid
+                if( fscanf(myF, "%s %s", linefromstandard, nameoffile) != 2 )
+                    break;
             }
         }
 
@@ -185,12 +193,51 @@ private:
 
 } theFile;
 
+class cAxis
+{
+public:
+    bool myfHide;
+
+    cAxis()
+        : myfHide( false )
+    {
+
+    }
+
+    // Toggle Axis display
+    void Toggle()
+    {
+        myfHide = ! myfHide;
+    }
+
+    // Draw, if not hidden
+    void Draw()
+    {
+        if( myfHide )
+            return;
+        GLfloat xoff = - 150;
+        GLfloat size = 100;
+        glBegin(GL_LINES);
+        glColor3f(0.0, 1.0, 0.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff + size, 0, 0);
+        glColor3f(0.0, 0.0, 1.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff, size, 0 );
+        glColor3f(1.0, 0.0, 0.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff, 0, size );
+        glColor3f(0.0, 1.0, 0.0);
+        glEnd();
+    }
+} theAxis;
+
 // called when mousewheel is turned
 void mousewheel(int button, int dir, int x, int y)
 {
     theCamera.Zoom( dir );
 }
-// called when the window changes size
+// called when the window change
 void ChangeSize(GLsizei w, GLsizei h)
 {
     theCamera.WindowSize( w, h );
@@ -215,6 +262,16 @@ void mouse(int button, int state, int x, int y)
         break;
     }
 }
+// Called when munue item selected
+void menu( int item )
+{
+    switch( item )
+    {
+    case 1:
+        theAxis.Toggle();
+        break;
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -227,6 +284,14 @@ int main(int argc, char* argv[])
 
     SetupRC();
 
+    // Create menu, popped up when user clicks right mouse button
+    glutCreateMenu( menu );
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+    // menu item to toggle display of axis
+    glutAddMenuEntry( "Axis", 1 );
+
+    // register functions to call when something happens
     glutDisplayFunc(RenderScene);
     glutReshapeFunc(ChangeSize);
     glutMouseFunc(mouse);
@@ -296,6 +361,8 @@ void RenderScene()
     glRotatef(zRot, 0.0, 0.0, 1.0);
 
     theFile.DrawFacets();
+
+    theAxis.Draw();
 
     glPopMatrix();
 
