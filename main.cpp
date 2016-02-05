@@ -25,51 +25,55 @@ void mouse(int, int, int, int);
 
 static char nameoffile[256];
 
+class cMenu
+{
+public:
+    enum class item
+    {
+        none,
+        axis,
+        zoom,
+        spinx,
+        spiny,
+        spinz,
+        panx,
+        pany,
+        panz,
+        viewx,
+        viewy,
+        viewz
+    };
+
+    /// Construct menu
+    void Construct();
+
+    /**  User has selected a menu item, do whatever is required
+
+    @param[in] i index to menu item selected
+
+    */
+    void Do( item i );
+
+} theMenu;
+
 class cMouseWheel
 {
 public:
-    enum class mode
-    {
-        zoom,
-        spinX,
-        spinY,
-        spinZ
-    }
-    myMode;
+
+    cMenu::item myMode;
 
     cMouseWheel()
-        : myMode( mode::zoom )
+        : myMode(cMenu::item::zoom )
     {
 
     }
-    void ConstructMenu()
+
+    void Mode( cMenu::item item )
     {
-        glutAddMenuEntry( "Wheel Zoom", 2 );
-        glutAddMenuEntry( "Wheel Spin X", 3 );
-        glutAddMenuEntry( "Wheel Spin Y", 4 );
-        glutAddMenuEntry( "Wheel Spin Z", 5 );
+        myMode = item;
     }
 
-    void Mode( int item )
-    {
-        switch ( item )
-        {
-        case 2:
-            myMode = mode::zoom;
-            break;
-        case 3:
-            myMode = mode::spinX;
-            break;
-        case 4:
-            myMode = mode::spinY;
-            break;
-        case 5:
-            myMode = mode::spinZ;
-            break;
-        }
-    }
-
-    mode Mode()
+    cMenu::item Mode()
     {
         return myMode;
     }
@@ -82,14 +86,7 @@ class cCamera
 public:
 
     /** Constructor */
-    cCamera()
-        : myZoom( 1 )
-        , mySpinX( 45 )
-        , mySpinY( 45 )
-        , mySpinZ( 45 )
-    {
-
-    }
+    cCamera();
 
     /** Zoom */
     void Zoom( int dir )
@@ -120,7 +117,7 @@ public:
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         gluLookAt( 0, -1000, 0,
-                   0, 0, 0,
+                   myPanX, myPanY, myPanZ,
                    0, 0, 1 );
     }
 
@@ -132,17 +129,17 @@ public:
 
         switch( theMouseWheel.Mode() )
         {
-        case cMouseWheel::mode::spinX:
+        case cMenu::item::spinx:
             mySpinX += inc;
             if( mySpinX > 360 )
                 mySpinX -= 360;
             break;
-        case cMouseWheel::mode::spinY:
+        case cMenu::item::spiny:
             mySpinY += inc;
             if( mySpinY > 360 )
                 mySpinY -= 360;
             break;
-        case cMouseWheel::mode::spinZ:
+        case cMenu::item::spinz:
             mySpinZ += inc;
             if( mySpinZ > 360 )
                 mySpinZ -= 360;
@@ -159,22 +156,22 @@ public:
         z = mySpinZ;
     }
 
-    void setViewAlongAxis( int menuItem )
+    void setViewAlongAxis( cMenu::item menuItem )
     {
         switch( menuItem )
         {
 
-        case 6:
+        case cMenu::item::viewx:
             mySpinX = 0;
             mySpinY = 0;
             mySpinZ = 90;
             break;
-        case 7:
+        case cMenu::item::viewy:
             mySpinX = 0;
             mySpinY = 0;
             mySpinZ = 0;
             break;
-        case 8:
+        case cMenu::item::viewz:
             mySpinX = 90;
             mySpinY = 0;
             mySpinZ = 0;
@@ -183,180 +180,208 @@ public:
         }
     }
 
+    void Pan(  int dir )
+    {
+        float inc = dir * 10;
+
+        switch( theMouseWheel.Mode() )
+        {
+        case cMenu::item::panx:
+            myPanX += inc;
+            break;
+        case cMenu::item::pany:
+            myPanY += inc;
+            break;
+        case cMenu::item::panz:
+            myPanZ += inc;
+            break;
+        }
+
+        glutPostRedisplay();
+    }
+
 private:
 
-        float myZoom;       // Ratio of zoom in/out to default;
-        float myRatio;           // window aspect ratio;
-        float mySpinX;
-        float mySpinY;
-        float mySpinZ;
+    float myZoom;       // Ratio of zoom in/out to default;
+    float myRatio;           // window aspect ratio;
+    float mySpinX;
+    float mySpinY;
+    float mySpinZ;
+    float myPanX;
+    float myPanY;
+    float myPanZ;
 
-    } theCamera;
+} theCamera;
 
 /// Looks after STL file containing the triangular meshes
-    class cSTLFile
+class cSTLFile
+{
+public:
+
+    void Open( const char* fname )
     {
-    public:
+        myFacetCount = 0;
+        myVertexCount = 0;
+        myF = fopen( fname, "r" );
+    }
 
-        void Open( const char* fname )
+    FILE * file()
+    {
+        return myF;
+    }
+
+    void Readfacets()
+    {
+        char linefromstandard[256];
+        float coordinatex, coordinatey, coordinatez;
+
+        if ( ! myF )
         {
-            myFacetCount = 0;
-            myVertexCount = 0;
-            myF = fopen( fname, "r" );
+            cout << "I couldn't find the file or file is empty." << endl;
         }
 
-        FILE * file()
+        fscanf(myF, "%s %s", linefromstandard, nameoffile);
+        cout << linefromstandard <<" "<< nameoffile << endl;
+
+        while((char) fgetc(myF)!='e')
         {
-            return myF;
-        }
-
-        void Readfacets()
-        {
-            char linefromstandard[256];
-            float coordinatex, coordinatey, coordinatez;
-
-            if ( ! myF )
+            fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
+                   &coordinatex, &coordinatey, &coordinatez);
+            myFacetCount++;
+            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
+            normalvector.push_back(coordinatex);
+            normalvector.push_back(coordinatey);
+            normalvector.push_back(coordinatez);
+            fscanf(myF, "%s %s", linefromstandard, linefromstandard);
+            for (int n=0; n<3; n++)
             {
-                cout << "I couldn't find the file or file is empty." << endl;
-            }
-
-            fscanf(myF, "%s %s", linefromstandard, nameoffile);
-            cout << linefromstandard <<" "<< nameoffile << endl;
-
-            while((char) fgetc(myF)!='e')
-            {
-                fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
+                fscanf(myF, "%s %f %f %f", linefromstandard,
                        &coordinatex, &coordinatey, &coordinatez);
-                myFacetCount++;
+                myVertexCount++;
                 /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-                normalvector.push_back(coordinatex);
-                normalvector.push_back(coordinatey);
-                normalvector.push_back(coordinatez);
-                fscanf(myF, "%s %s", linefromstandard, linefromstandard);
-                for (int n=0; n<3; n++)
-                {
-                    fscanf(myF, "%s %f %f %f", linefromstandard,
-                           &coordinatex, &coordinatey, &coordinatez);
-                    myVertexCount++;
-                    /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-                    trianglecoordinate.push_back(coordinatex);
-                    trianglecoordinate.push_back(coordinatey);
-                    trianglecoordinate.push_back(coordinatez);
-                }
-                fscanf(myF, "%s", linefromstandard);
-                fscanf(myF, "%s", linefromstandard);
-
-                fgetc(myF);
-                if ((char) fgetc(myF)=='e')
-                {
-                    // end of solid
-                    fscanf(myF, "%s %s", linefromstandard, nameoffile);
-                    //cout << linefromstandard <<" "<< nameoffile << endl;
-
-                    // new solid
-                    if( fscanf(myF, "%s %s", linefromstandard, nameoffile) != 2 )
-                        break;
-                }
+                trianglecoordinate.push_back(coordinatex);
+                trianglecoordinate.push_back(coordinatey);
+                trianglecoordinate.push_back(coordinatez);
             }
+            fscanf(myF, "%s", linefromstandard);
+            fscanf(myF, "%s", linefromstandard);
 
-            fclose(myF);
-        }
-
-        int FacetCount()
-        {
-            return myFacetCount;
-        }
-
-        void DrawFacets()
-        {
-            int groupsize=9;
-            glBegin(GL_TRIANGLES);
-            for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
+            fgetc(myF);
+            if ((char) fgetc(myF)=='e')
             {
-                int neptunium = groupsize*protactinium;
-                glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
-                           trianglecoordinate.at(neptunium+2));
-                glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
-                           trianglecoordinate.at(neptunium+5));
-                glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
-                           trianglecoordinate.at(neptunium+8));
+                // end of solid
+                fscanf(myF, "%s %s", linefromstandard, nameoffile);
+                //cout << linefromstandard <<" "<< nameoffile << endl;
+
+                // new solid
+                if( fscanf(myF, "%s %s", linefromstandard, nameoffile) != 2 )
+                    break;
             }
-            glEnd();
         }
 
-    private:
-        FILE * myF;
-        int myFacetCount;
-        int myVertexCount;
-        vector <float> normalvector;
-        vector <float> trianglecoordinate;
+        fclose(myF);
+    }
 
-    } theFile;
-
-    class cAxis
+    int FacetCount()
     {
-    public:
-        bool myfHide;
+        return myFacetCount;
+    }
 
-        cAxis()
-            : myfHide( false )
+    void DrawFacets()
+    {
+        int groupsize=9;
+        glBegin(GL_TRIANGLES);
+        for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
         {
-
+            int neptunium = groupsize*protactinium;
+            glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
+                       trianglecoordinate.at(neptunium+2));
+            glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
+                       trianglecoordinate.at(neptunium+5));
+            glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
+                       trianglecoordinate.at(neptunium+8));
         }
+        glEnd();
+    }
 
-        // Toggle Axis display
-        void Toggle()
-        {
-            myfHide = ! myfHide;
-        }
+private:
+    FILE * myF;
+    int myFacetCount;
+    int myVertexCount;
+    vector <float> normalvector;
+    vector <float> trianglecoordinate;
 
-        // Draw, if not hidden
-        void Draw()
-        {
-            if( myfHide )
-                return;
-            GLfloat xoff = - 150;
-            GLfloat size = 100;
-            glBegin(GL_LINES);
-            glColor3f(0.0, 1.0, 0.0);
-            glVertex3f( xoff, 0, 0 );
-            glVertex3f( xoff + size, 0, 0);
-            glColor3f(0.0, 0.0, 1.0);
-            glVertex3f( xoff, 0, 0 );
-            glVertex3f( xoff, size, 0 );
-            glColor3f(1.0, 0.0, 0.0);
-            glVertex3f( xoff, 0, 0 );
-            glVertex3f( xoff, 0, size );
-            glColor3f(0.0, 1.0, 0.0);
-            glEnd();
-        }
-    } theAxis;
+} theFile;
+
+class cAxis
+{
+public:
+    bool myfHide;
+
+    cAxis()
+        : myfHide( false )
+    {
+
+    }
+
+    // Toggle Axis display
+    void Toggle()
+    {
+        myfHide = ! myfHide;
+    }
+
+    // Draw, if not hidden
+    void Draw()
+    {
+        if( myfHide )
+            return;
+        GLfloat xoff = - 150;
+        GLfloat size = 100;
+        glBegin(GL_LINES);
+        glColor3f(0.0, 1.0, 0.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff + size, 0, 0);
+        glColor3f(0.0, 0.0, 1.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff, size, 0 );
+        glColor3f(1.0, 0.0, 0.0);
+        glVertex3f( xoff, 0, 0 );
+        glVertex3f( xoff, 0, size );
+        glColor3f(0.0, 1.0, 0.0);
+        glEnd();
+    }
+} theAxis;
 
 
 // called when mousewheel is turned
-    void mousewheel(int button, int dir, int x, int y)
+void mousewheel(int button, int dir, int x, int y)
+{
+    switch( theMouseWheel.myMode )
     {
-        switch( theMouseWheel.myMode )
-        {
-        case cMouseWheel::mode::zoom:
-            theCamera.Zoom( dir );
-            break;
-        case cMouseWheel::mode::spinX:
-        case cMouseWheel::mode::spinY:
-        case cMouseWheel::mode::spinZ:
-            theCamera.setSpin( dir );
-            break;
-        }
+    case cMenu::item::zoom:
+        theCamera.Zoom( dir );
+        break;
+    case cMenu::item::spinx:
+    case cMenu::item::spiny:
+    case cMenu::item::spinz:
+        theCamera.setSpin( dir );
+        break;
+    case cMenu::item::panx:
+    case cMenu::item::pany:
+    case cMenu::item::panz:
+        theCamera.Pan( dir );
+        break;
     }
+}
 // called when the window change
-    void ChangeSize(GLsizei w, GLsizei h)
-    {
-        theCamera.WindowSize( w, h );
-    }
+void ChangeSize(GLsizei w, GLsizei h)
+{
+    theCamera.WindowSize( w, h );
+}
 
 // called when mouse button pressed
-    void mouse(int button, int state, int x, int y)
-    {
+void mouse(int button, int state, int x, int y)
+{
 //    switch (button)
 //    {
 //    case GLUT_LEFT_BUTTON:
@@ -372,128 +397,159 @@ private:
 //    default:
 //        break;
 //    }
-    }
+}
 // Called when menu item selected
-    void menu( int item )
-    {
-        switch( item )
-        {
-        case 1:
-            theAxis.Toggle();
-            break;
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-            theMouseWheel.Mode( item);
-            break;
+void menu( int item )
+{
+    theMenu.Do( (cMenu::item) item );
+}
 
-        case 6:
-        case 7:
-        case 8:
-            theCamera.setViewAlongAxis( item );
-            break;
-        }
+void cMenu::Construct()
+{
+    glutCreateMenu( menu );
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+    glutAddMenuEntry( "Toggle Axis", (int)item::axis );
+    glutAddMenuEntry( "Wheel Zoom", (int)item::zoom );
+    glutAddMenuEntry( "Wheel Spin X", (int)item::spinx );
+    glutAddMenuEntry( "Wheel Spin Y", (int)item::spiny );
+    glutAddMenuEntry( "Wheel Spin Z", (int)item::spinz );
+    glutAddMenuEntry( "View down X", (int)item::viewx );
+    glutAddMenuEntry( "View down Y", (int)item::viewy );
+    glutAddMenuEntry( "View down Z", (int)item::viewz );
+    glutAddMenuEntry( "Pan X", (int)item::panx );
+    glutAddMenuEntry( "Pan Y", (int)item::pany );
+    glutAddMenuEntry( "Pan Z", (int)item::panz );
+}
+
+void cMenu::Do( item i )
+{
+    switch( i )
+    {
+    case item::axis:
+        theAxis.Toggle();
+        break;
+    case item::zoom:
+    case item::spinx:
+    case item::spiny:
+    case item::spinz:
+    case item::panx:
+    case item::pany:
+    case item::panz:
+
+        theMouseWheel.Mode( i );
+        break;
+
+    case item::viewx:
+    case item::viewy:
+    case item::viewz:
+        theCamera.setViewAlongAxis( i );
+        break;
+    }
+}
+
+cCamera::cCamera()
+    : myZoom( 1 )
+    , mySpinX( 45 )
+    , mySpinY( 45 )
+    , mySpinZ( 45 )
+    , myPanX( 0 )
+    , myPanY( 0 )
+    , myPanZ( 0 )
+{
+
+}
+
+int main(int argc, char* argv[])
+{
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    char stringone[256] = "STL Viewer ";
+    strcat(stringone,nameoffile);
+
+    glutCreateWindow(stringone);
+
+    SetupRC();
+
+    // Create menu, popped up when user clicks right mouse button
+    theMenu.Construct();
+
+    // register functions to call when something happens
+    glutDisplayFunc(RenderScene);
+    glutReshapeFunc(ChangeSize);
+    glutMouseFunc(mouse);
+    glutMouseWheelFunc( mousewheel );
+
+    glutMainLoop();
+
+    system ("pause");
+
+    return 0;
+}
+
+void SetupRC()
+{
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glColor3f(0.0, 1.0, 0.0);
+    glShadeModel(GL_FLAT);
+    GLfloat ambientLight[]= {0.3, 0.3, 0.3, 1.0};
+    GLfloat diffuseLight[]= {0.7, 0.7, 0.7, 1.0};
+    GLfloat specular[]= {1.0, 1.0, 1.0, 1.0};
+    GLfloat specref[]= {1.0, 1.0, 1.0, 1.0};
+    GLfloat lightPos[]= {0.0, 0.0, 75.0, 1.0};
+    glEnable(GL_LIGHTING);
+    glLightfv(GL_LIGHT0,GL_AMBIENT,ambientLight);
+    glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuseLight);
+    glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
+    glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
+    glEnable(GL_LIGHT0);
+
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
+    glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
+    glMateriali(GL_FRONT,GL_SHININESS,128);
+
+}
+
+void RenderScene()
+{
+    // Move camera to required position
+    theCamera.Position();
+
+    string givenline;
+    vector<string> givenlines;
+    string title, eachline, facet, normal, vertex;
+    char linefromstandard[256];
+    float coordinatex, coordinatey, coordinatez;
+    int plutonium;
+
+    // read mesh from file, if not already done
+    if( ! theFile.FacetCount() )
+    {
+        theFile.Open(  "coin_cargo.stl" );
+
+        theFile.Readfacets();
     }
 
-    int main(int argc, char* argv[])
-    {
-        glutInit(&argc, argv);
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-        char stringone[256] = "STL Viewer ";
-        strcat(stringone,nameoffile);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 
-        glutCreateWindow(stringone);
+    glPushMatrix();
+    float xRot=45.0, yRot=45.0, zRot=45.0;
+    theCamera.Spin( xRot, yRot, zRot );
+    glRotatef(xRot, 1.0, 0.0, 0.0);
+    glRotatef(yRot, 0.0, 1.0, 0.0);
+    glRotatef(zRot, 0.0, 0.0, 1.0);
 
-        SetupRC();
+    theFile.DrawFacets();
 
-        // Create menu, popped up when user clicks right mouse button
-        glutCreateMenu( menu );
-        glutAttachMenu(GLUT_RIGHT_BUTTON);
+    theAxis.Draw();
 
-        // menu item to toggle display of axis
-        glutAddMenuEntry( "Hide Axis", 1 );
-        theMouseWheel.ConstructMenu();
-        glutAddMenuEntry( "View down X", 6 );
-        glutAddMenuEntry( "View down Y", 7 );
-        glutAddMenuEntry( "View down Z", 8 );
+    glPopMatrix();
 
-        // register functions to call when something happens
-        glutDisplayFunc(RenderScene);
-        glutReshapeFunc(ChangeSize);
-        glutMouseFunc(mouse);
-        glutMouseWheelFunc( mousewheel );
-
-        glutMainLoop();
-
-        system ("pause");
-
-        return 0;
-    }
-
-    void SetupRC()
-    {
-        glClearColor(0.0, 0.0, 0.0, 1.0);
-        glColor3f(0.0, 1.0, 0.0);
-        glShadeModel(GL_FLAT);
-        GLfloat ambientLight[]= {0.3, 0.3, 0.3, 1.0};
-        GLfloat diffuseLight[]= {0.7, 0.7, 0.7, 1.0};
-        GLfloat specular[]= {1.0, 1.0, 1.0, 1.0};
-        GLfloat specref[]= {1.0, 1.0, 1.0, 1.0};
-        GLfloat lightPos[]= {0.0, 0.0, 75.0, 1.0};
-        glEnable(GL_LIGHTING);
-        glLightfv(GL_LIGHT0,GL_AMBIENT,ambientLight);
-        glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuseLight);
-        glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
-        glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
-        glEnable(GL_LIGHT0);
-
-        glEnable(GL_COLOR_MATERIAL);
-        glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
-        glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
-        glMateriali(GL_FRONT,GL_SHININESS,128);
-
-    }
-
-    void RenderScene()
-    {
-        // Move camera to required position
-        theCamera.Position();
-
-        string givenline;
-        vector<string> givenlines;
-        string title, eachline, facet, normal, vertex;
-        char linefromstandard[256];
-        float coordinatex, coordinatey, coordinatez;
-        int plutonium;
-
-        // read mesh from file, if not already done
-        if( ! theFile.FacetCount() )
-        {
-            theFile.Open(  "coin_cargo.stl" );
-
-            theFile.Readfacets();
-        }
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH_TEST);
-
-        glPushMatrix();
-        float xRot=45.0, yRot=45.0, zRot=45.0;
-        theCamera.Spin( xRot, yRot, zRot );
-        glRotatef(xRot, 1.0, 0.0, 0.0);
-        glRotatef(yRot, 0.0, 1.0, 0.0);
-        glRotatef(zRot, 0.0, 0.0, 1.0);
-
-        theFile.DrawFacets();
-
-        theAxis.Draw();
-
-        glPopMatrix();
-
-        glutSwapBuffers();
-    }
+    glutSwapBuffers();
+}
 
 
 
