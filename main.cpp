@@ -258,20 +258,7 @@ public:
         myfilename = fn;
     }
 
-    void drawBitmapText()
-    {
-        if( mySolidCount == -99 )
-            return;
-        glDisable(GL_LIGHTING);
-        glColor3f( 1., 1., 1. );
-        glRasterPos2f(-250,0);
-
-        for( auto c : myLastSolidName )
-        {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-        }
-        glEnable(GL_LIGHTING);
-    }
+    void DrawText();
 
 private:
     string myfilename;
@@ -538,26 +525,51 @@ void cSTLFile::Readfacets()
     fclose(myF);
 }
 
-    void cSTLFile::DrawFacets()
+void cSTLFile::DrawFacets()
+{
+    int groupsize=9;
+    glBegin(GL_TRIANGLES);
+    for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
     {
-        int groupsize=9;
-        glBegin(GL_TRIANGLES);
-        for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
-        {
-            int neptunium = groupsize*protactinium;
-            glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
-                       trianglecoordinate.at(neptunium+2));
-            glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
-                       trianglecoordinate.at(neptunium+5));
-            glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
-                       trianglecoordinate.at(neptunium+8));
-        }
-        glEnd();
+        int neptunium = groupsize*protactinium;
+        glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
+                   trianglecoordinate.at(neptunium+2));
+        glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
+                   trianglecoordinate.at(neptunium+5));
+        glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
+                   trianglecoordinate.at(neptunium+8));
+    }
+    glEnd();
 
-        drawBitmapText();
+    DrawText();
+}
+
+void cSTLFile::DrawText()
+{
+    if( mySolidCount == -99 )
+        return;
+    glDisable(GL_LIGHTING);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0.0, 100, 0.0, 100);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(5, 5);
+    glColor3f( 1., 1., 1. );
+
+    for( auto c : myLastSolidName )
+    {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
     }
 
-
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glEnable(GL_LIGHTING);
+}
 int main(int argc, char* argv[])
 {
     glutInit(&argc, argv);
