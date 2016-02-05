@@ -12,6 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="packit4me2.stl" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -31,7 +32,7 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-Wall" />
+			<Add option="-std=c++11" />
 			<Add directory="$(#glut.include)" />
 			<Add directory="$(#glut.include)/GL" />
 		</Compiler>

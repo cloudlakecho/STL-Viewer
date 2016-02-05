@@ -214,6 +214,30 @@ private:
 
 } theCamera;
 
+class cFacet
+{
+public:
+
+    cFacet( const string& n )
+        : myName( n )
+    {
+
+    }
+    void Read( FILE * F );
+
+    void DrawTriangle();
+    void DrawWireFrame();
+
+    bool IsBin()
+    {
+        return ( myName.find("PACK") != -1 );
+    }
+
+private:
+    string myName;
+    vector< float > myV;
+};
+
 /// Looks after STL file containing the triangular meshes
 class cSTLFile
 {
@@ -225,10 +249,9 @@ public:
 
     }
 
-    void Open( const char* fname )
+    void Open( )
     {
-        Filename( fname );
-        myF = fopen( fname, "r" );
+        myF = fopen( myfilename.c_str(), "r" );
     }
 
     FILE * file()
@@ -267,9 +290,9 @@ private:
     int myVertexCount;
     int mySolidCount;       // number of solids in file
     int mySolidShowCount;   // number of solids to show
-    vector <float> normalvector;
-    vector <float> trianglecoordinate;
     string myLastSolidName;
+    vector < cFacet > myFacets;
+    vector < cFacet > myBinFacets;
 
 } theFile;
 
@@ -447,6 +470,28 @@ void cSTLFile::Solid( int dir )
     glutPostRedisplay();
 }
 
+void cFacet::Read( FILE * F )
+{
+    char linefromstandard[256];
+    float x,y,z;
+    fscanf(F, "%s %s %f %f %f", linefromstandard, linefromstandard,
+           &x, &y, &z);
+    myV.push_back( x );
+    myV.push_back( y );
+    myV.push_back( z );
+    fscanf(F, "%s %s", linefromstandard, linefromstandard);
+    for (int n=0; n<3; n++)
+    {
+        fscanf(F, "%s %f %f %f", linefromstandard,
+               &x, &y, &z);
+        myV.push_back( x );
+        myV.push_back( y );
+        myV.push_back( z );
+    }
+    fscanf(F, "%s", linefromstandard);
+    fscanf(F, "%s", linefromstandard);
+}
+
 void cSTLFile::Readfacets()
 {
 
@@ -461,34 +506,25 @@ void cSTLFile::Readfacets()
     int SolidCount = 0;
     myFacetCount = 0;
     myVertexCount = 0;
-    normalvector.clear();
-    trianglecoordinate.clear();
+    myFacets.clear();
+    myBinFacets.clear();
 
     fscanf(myF, "%s %s", linefromstandard, nameoffile);
     //cout << linefromstandard <<" "<< nameoffile << endl;
 
     while((char) fgetc(myF)!='e')
     {
-        fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
-               &coordinatex, &coordinatey, &coordinatez);
-        myFacetCount++;
-        //cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;
-        normalvector.push_back(coordinatex);
-        normalvector.push_back(coordinatey);
-        normalvector.push_back(coordinatez);
-        fscanf(myF, "%s %s", linefromstandard, linefromstandard);
-        for (int n=0; n<3; n++)
+        cFacet facet( nameoffile );
+        facet.Read( myF );
+        if( ! facet.IsBin() )
         {
-            fscanf(myF, "%s %f %f %f", linefromstandard,
-                   &coordinatex, &coordinatey, &coordinatez);
-            myVertexCount++;
-            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-            trianglecoordinate.push_back(coordinatex);
-            trianglecoordinate.push_back(coordinatey);
-            trianglecoordinate.push_back(coordinatez);
+            myFacetCount++;
+            myFacets.push_back( facet );
         }
-        fscanf(myF, "%s", linefromstandard);
-        fscanf(myF, "%s", linefromstandard);
+        else
+        {
+            myBinFacets.push_back( facet );
+        }
 
         fgetc(myF);
         if ((char) fgetc(myF)=='e')
@@ -525,30 +561,68 @@ void cSTLFile::Readfacets()
     fclose(myF);
 }
 
+void cFacet::DrawTriangle()
+{
+    glVertex3f( myV[ 3 ], myV[ 4 ], myV[ 5 ] );
+    glVertex3f( myV[ 6 ], myV[ 7 ], myV[ 8 ] );
+    glVertex3f( myV[ 9 ], myV[ 10 ], myV[ 11 ] );
+}
+
+void cFacet::DrawWireFrame()
+{
+    glVertex3f( myV[ 3 ], myV[ 4 ], myV[ 5 ] );
+    glVertex3f( myV[ 6 ], myV[ 7 ], myV[ 8 ] );
+    glVertex3f( myV[ 6 ], myV[ 7 ], myV[ 8 ] );
+    glVertex3f( myV[ 9 ], myV[ 10 ], myV[ 11 ] );
+    glVertex3f( myV[ 9 ], myV[ 10 ], myV[ 11 ] );
+    glVertex3f( myV[ 3 ], myV[ 4 ], myV[ 5 ] );
+
+}
+
 void cSTLFile::DrawFacets()
 {
-    int groupsize=9;
+
+    glColor4f(0.0, 1.0, 0.0, 0.5 );
     glBegin(GL_TRIANGLES);
-    for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
-    {
-        int neptunium = groupsize*protactinium;
-        glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
-                   trianglecoordinate.at(neptunium+2));
-        glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
-                   trianglecoordinate.at(neptunium+5));
-        glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
-                   trianglecoordinate.at(neptunium+8));
-    }
+    for( auto& f : myFacets )
+        f.DrawTriangle();
     glEnd();
+
+    glColor3f(0.0, 0.0, 1.0);
+    glLineWidth( 5 );
+    glBegin(GL_LINES);
+    for( auto& f : myFacets )
+        f.DrawWireFrame();
+    glEnd();
+
+    glColor4f(1.0, 1.0, 1.0, 0.2 );
+    glBegin(GL_TRIANGLES);
+    for( auto& f : myBinFacets )
+        f.DrawTriangle();
+    glEnd();
+
+
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINES);
+    for( auto& f : myBinFacets )
+        f.DrawWireFrame();
+    glEnd();
+
 
     DrawText();
 }
 
 void cSTLFile::DrawText()
 {
+    // check if we are showing all boxes
     if( mySolidCount == -99 )
         return;
-    glDisable(GL_LIGHTING);
+
+    // color the letters white, no matter the lighting
+    //glDisable(GL_LIGHTING);
+    glColor3f( 1., 1., 1. );
+
+    // locate the letters in botton left, no matter spinning, zooming and panning
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -557,21 +631,23 @@ void cSTLFile::DrawText()
     glPushMatrix();
     glLoadIdentity();
     glRasterPos2i(5, 5);
-    glColor3f( 1., 1., 1. );
 
+    // draw the letters
     for( auto c : myLastSolidName )
     {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
     }
 
+    // restore opengl state
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
 }
 int main(int argc, char* argv[])
 {
+    theFile.Filename( argv[1] );
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     char stringone[256] = "STL Viewer ";
@@ -599,25 +675,28 @@ int main(int argc, char* argv[])
 
 void SetupRC()
 {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glColor3f(0.0, 1.0, 0.0);
-    glShadeModel(GL_FLAT);
-    GLfloat ambientLight[]= {0.3, 0.3, 0.3, 1.0};
-    GLfloat diffuseLight[]= {0.7, 0.7, 0.7, 1.0};
-    GLfloat specular[]= {1.0, 1.0, 1.0, 1.0};
-    GLfloat specref[]= {1.0, 1.0, 1.0, 1.0};
-    GLfloat lightPos[]= {0.0, 0.0, 75.0, 1.0};
-    glEnable(GL_LIGHTING);
-    glLightfv(GL_LIGHT0,GL_AMBIENT,ambientLight);
-    glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuseLight);
-    glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
-    glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
-    glEnable(GL_LIGHT0);
-
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
-    glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
-    glMateriali(GL_FRONT,GL_SHININESS,128);
+//    glShadeModel(GL_FLAT);
+//    GLfloat ambientLight[]= {0.3, 0.3, 0.3, 1.0};
+//    GLfloat diffuseLight[]= {0.7, 0.7, 0.7, 1.0};
+//    GLfloat specular[]= {1.0, 1.0, 1.0, 1.0};
+//    GLfloat specref[]= {1.0, 1.0, 1.0, 1.0};
+//    GLfloat lightPos[]= {0.0, 0.0, 75.0, 1.0};
+//    glEnable(GL_LIGHTING);
+//    glLightfv(GL_LIGHT0,GL_AMBIENT,ambientLight);
+//    glLightfv(GL_LIGHT0,GL_DIFFUSE,diffuseLight);
+//    glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
+//    glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
+//    glEnable(GL_LIGHT0);
+//
+//    glEnable(GL_COLOR_MATERIAL);
+//    glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
+//    glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
+//    glMateriali(GL_FRONT,GL_SHININESS,128);
 
 }
 
@@ -626,23 +705,16 @@ void RenderScene()
     // Move camera to required position
     theCamera.Position();
 
-    string givenline;
-    vector<string> givenlines;
-    string title, eachline, facet, normal, vertex;
-    char linefromstandard[256];
-    float coordinatex, coordinatey, coordinatez;
-    int plutonium;
-
     // read mesh from file, if not already done
     if( ! theFile.FacetCount() )
     {
-        theFile.Open(  "coin_cargo.stl" );
+        theFile.Open( );
 
         theFile.Readfacets();
     }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
     glPushMatrix();
