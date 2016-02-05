@@ -198,7 +198,8 @@ void RenderScene()
 
 void SpinDisplay()
 {
-	spin =+ 20.0;
+	// increment the spin a little on each mouse button click
+	spin += 20.0;
 	spin = spin - 360 * (int) spin/360.0;
 	glutPostRedisplay();
 }
