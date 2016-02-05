@@ -32,11 +32,11 @@ int main(int argc, char* argv[])
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	char stringone[256] = "STL Viewer ";
 	strcat(stringone,nameoffile);
-	
+
 	glutCreateWindow(stringone);
-	
+
 	SetupRC();
-	
+
 	glutDisplayFunc(RenderScene);
 	glutReshapeFunc(ChangeSize);
 	glutMouseFunc(mouse);
@@ -45,10 +45,10 @@ int main(int argc, char* argv[])
 
 	system ("pause");
 
-	
-	
-	
-	
+
+
+
+
 	return 0;
 }
 
@@ -68,7 +68,7 @@ void SetupRC()
 	glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
 	glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
 	glEnable(GL_LIGHT0);
-	
+
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
 	glMaterialfv(GL_FRONT,GL_SPECULAR,specref);
@@ -84,7 +84,7 @@ void ChangeSize(GLsizei w, GLsizei h)
 		h=1;
 
 	glViewport (0, 0, w, h);
-	
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	float ratio = w/h;
@@ -99,12 +99,12 @@ void ChangeSize(GLsizei w, GLsizei h)
 }
 
 void RenderScene()
-{		
+{
 	string givenline;
 	vector<string> givenlines;
 	string title, eachline, facet, normal, vertex;
 	char linefromstandard[256];
-	float coordinatex, coordinatey, coordinatez; 
+	float coordinatex, coordinatey, coordinatez;
 	int totalfacet=0, totalvertex=0;
 	int plutonium;
 	FILE* givenfile;
@@ -114,7 +114,7 @@ void RenderScene()
 	/*givenfile = fopen ("SmallGear.stl","r");*/
 	/*givenfile = fopen ("handle.stl","r");*/
 	/*givenfile = fopen ("crank.stl","r");*/
-	
+
 	vector <float> normalvector;
 	vector <float> trianglecoordinate;
 	if (givenfile != NULL)
@@ -122,12 +122,12 @@ void RenderScene()
 		/*cout << "There is the file" << endl;*/
 		fscanf(givenfile, "%s %s", linefromstandard, nameoffile);
 		/*cout << "The file name is " << nameoffile << endl;*/
-		
+
 		int m=1;
 		while((char) fgetc(givenfile)!='e')
 		{
-			
-			fscanf(givenfile, "%s %s %f %f %f", linefromstandard, linefromstandard, 
+
+			fscanf(givenfile, "%s %s %f %f %f", linefromstandard, linefromstandard,
 				&coordinatex, &coordinatey, &coordinatez);
 			totalfacet++;
 			/*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
@@ -137,7 +137,7 @@ void RenderScene()
 			fscanf(givenfile, "%s %s", linefromstandard, linefromstandard);
 			for (int n=0; n<3; n++)
 			{
-				fscanf(givenfile, "%s %f %f %f", linefromstandard, 
+				fscanf(givenfile, "%s %f %f %f", linefromstandard,
 					&coordinatex, &coordinatey, &coordinatez);
 				totalvertex++;
 				/*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
@@ -152,17 +152,17 @@ void RenderScene()
 				break;
 				m=0;
 			}
-		} 
+		}
 		fclose(givenfile);
 	}
-	else 
+	else
 		cout << "I couldn't find the file or file is empty." << endl;
 
 	string filename;
 	int totalfacetnumber=0;
 	int filenameline = 2;
 	int facetline = 2+2+3;
-	
+
 	/*cout << "\n";
 	cout << totalfacet << " " << totalvertex/3 << " " << totalfacetnumber << endl;*/
 	cout << normalvector.size()/3 << " " << trianglecoordinate.size()/(3*3) << endl;
@@ -177,7 +177,7 @@ void RenderScene()
 	glRotatef(xRot, 1.0, 0.0, 0.0);
 	glRotatef(spin, 0.0, 1.0, 0.0); // Somehow this spin valiable doesn't work.
 	glRotatef(zRot, 0.0, 0.0, 1.0);
-	
+
 	int groupsize=9;
 	glBegin(GL_TRIANGLES);
 	for (protactinium=0; protactinium<totalfacet; protactinium++)
@@ -191,7 +191,7 @@ void RenderScene()
 			trianglecoordinate.at(neptunium+8));
 	}
 	glEnd();
-	
+
 	glPopMatrix();
 	glutSwapBuffers();
 }
@@ -200,7 +200,8 @@ void SpinDisplay()
 {
 	// increment the spin a little on each mouse button click
 	spin += 20.0;
-	spin = spin - 360 * (int) spin/360.0;
+	if( spin > 360 )
+        spin -= 360;
 	glutPostRedisplay();
 }
 
@@ -210,7 +211,7 @@ void mouse(int button, int state, int x, int y)
 	{
 		case GLUT_LEFT_BUTTON:
 			if (state == GLUT_DOWN)
-				glutIdleFunc(SpinDisplay);
+				SpinDisplay();
 			else
 				break;
 		case GLUT_MIDDLE_BUTTON:
