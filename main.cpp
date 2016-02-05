@@ -25,9 +25,12 @@ void mouse(int, int, int, int);
 
 static char nameoffile[256];
 
+/// Looks after camera position
 class cCamera
 {
 public:
+
+    /** Constructor */
     cCamera()
         : myZoom( 1 )
         , mySpin( 0 )
@@ -35,6 +38,7 @@ public:
 
     }
 
+    /** Zoom */
     void Zoom( int dir )
     {
         if( dir > 0 )
@@ -43,10 +47,10 @@ public:
             myZoom -= 0.1;
         if( myZoom < 0.1 )
             myZoom = 0.1;
-        cout << "Zoom " << myZoom;
         glutPostRedisplay();
     }
 
+    /** Window size */
     void WindowSize( int w, int h )
     {
         glViewport (0, 0, w, h);
@@ -54,6 +58,7 @@ public:
         glutPostRedisplay();
     }
 
+    /** Move camera into position */
     void Position()
     {
         glMatrixMode(GL_PROJECTION);
@@ -87,6 +92,98 @@ private:
     float mySpin;
 
 } theCamera;
+
+/// Looks after STL file containing the triangular meshes
+class cSTLFile
+{
+public:
+
+    void Open( const char* fname )
+    {
+        myFacetCount = 0;
+        myVertexCount = 0;
+        myF = fopen( fname, "r" );
+    }
+
+    FILE * file()
+    {
+        return myF;
+    }
+
+    void Readfacets()
+    {
+        char linefromstandard[256];
+        float coordinatex, coordinatey, coordinatez;
+
+        if ( ! myF )
+        {
+            cout << "I couldn't find the file or file is empty." << endl;
+        }
+
+        fscanf(myF, "%s %s", linefromstandard, nameoffile);
+
+        while((char) fgetc(myF)!='e')
+        {
+            fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
+                   &coordinatex, &coordinatey, &coordinatez);
+            myFacetCount++;
+            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
+            normalvector.push_back(coordinatex);
+            normalvector.push_back(coordinatey);
+            normalvector.push_back(coordinatez);
+            fscanf(myF, "%s %s", linefromstandard, linefromstandard);
+            for (int n=0; n<3; n++)
+            {
+                fscanf(myF, "%s %f %f %f", linefromstandard,
+                       &coordinatex, &coordinatey, &coordinatez);
+                myVertexCount++;
+                /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
+                trianglecoordinate.push_back(coordinatex);
+                trianglecoordinate.push_back(coordinatey);
+                trianglecoordinate.push_back(coordinatez);
+            }
+            fscanf(myF, "%s", linefromstandard);
+            fscanf(myF, "%s", linefromstandard);
+
+            if ((char) fgetc(myF)=='e')
+            {
+                break;
+            }
+        }
+
+        fclose(myF);
+    }
+
+    int FacetCount()
+    {
+        return myFacetCount;
+    }
+
+    void DrawFacets()
+    {
+        int groupsize=9;
+        glBegin(GL_TRIANGLES);
+        for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
+        {
+            int neptunium = groupsize*protactinium;
+            glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
+                       trianglecoordinate.at(neptunium+2));
+            glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
+                       trianglecoordinate.at(neptunium+5));
+            glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
+                       trianglecoordinate.at(neptunium+8));
+        }
+        glEnd();
+    }
+
+private:
+    FILE * myF;
+    int myFacetCount;
+    int myVertexCount;
+    vector <float> normalvector;
+    vector <float> trianglecoordinate;
+
+} theFile;
 
 // called when mousewheel is turned
 void mousewheel(int button, int dir, int x, int y)
@@ -139,10 +236,6 @@ int main(int argc, char* argv[])
 
     system ("pause");
 
-
-
-
-
     return 0;
 }
 
@@ -180,95 +273,31 @@ void RenderScene()
     string title, eachline, facet, normal, vertex;
     char linefromstandard[256];
     float coordinatex, coordinatey, coordinatez;
-    int totalfacet=0, totalvertex=0;
     int plutonium;
-    FILE* givenfile;
-    givenfile = fopen("coin_cargo.stl","r"); // The file you want to see. Currently it should be at the same
-    // folder with main.cpp. The file location depends on system spec.
-    /*givenfile = fopen ("anulus.stl","r");*/
-    /*givenfile = fopen ("SmallGear.stl","r");*/
-    /*givenfile = fopen ("handle.stl","r");*/
-    /*givenfile = fopen ("crank.stl","r");*/
 
-    vector <float> normalvector;
-    vector <float> trianglecoordinate;
-    if (givenfile != NULL)
+    // read mesh from file, if not already done
+    if( ! theFile.FacetCount() )
     {
-        /*cout << "There is the file" << endl;*/
-        fscanf(givenfile, "%s %s", linefromstandard, nameoffile);
-        /*cout << "The file name is " << nameoffile << endl;*/
 
-        int m=1;
-        while((char) fgetc(givenfile)!='e')
-        {
+        theFile.Open(  "coin_cargo.stl" );
 
-            fscanf(givenfile, "%s %s %f %f %f", linefromstandard, linefromstandard,
-                   &coordinatex, &coordinatey, &coordinatez);
-            totalfacet++;
-            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-            normalvector.push_back(coordinatex);
-            normalvector.push_back(coordinatey);
-            normalvector.push_back(coordinatez);
-            fscanf(givenfile, "%s %s", linefromstandard, linefromstandard);
-            for (int n=0; n<3; n++)
-            {
-                fscanf(givenfile, "%s %f %f %f", linefromstandard,
-                       &coordinatex, &coordinatey, &coordinatez);
-                totalvertex++;
-                /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-                trianglecoordinate.push_back(coordinatex);
-                trianglecoordinate.push_back(coordinatey);
-                trianglecoordinate.push_back(coordinatez);
-            }
-            fscanf(givenfile, "%s", linefromstandard);
-            fscanf(givenfile, "%s", linefromstandard);
-            if ((char) fgetc(givenfile)=='e')
-            {
-                break;
-                m=0;
-            }
-        }
-        fclose(givenfile);
+        theFile.Readfacets();
+
     }
-    else
-        cout << "I couldn't find the file or file is empty." << endl;
-
-    string filename;
-    int totalfacetnumber=0;
-    int filenameline = 2;
-    int facetline = 2+2+3;
-
-    /*cout << "\n";
-    cout << totalfacet << " " << totalvertex/3 << " " << totalfacetnumber << endl;*/
-    cout << normalvector.size()/3 << " " << trianglecoordinate.size()/(3*3) << endl;
-
-    int protactinium, neptunium;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+
     glPushMatrix();
     float xRot=45.0, yRot=45.0, zRot=45.0;
     glRotatef(xRot, 1.0, 0.0, 0.0);
     glRotatef(theCamera.Spin(), 0.0, 1.0, 0.0);
     glRotatef(zRot, 0.0, 0.0, 1.0);
 
-    int groupsize=9;
-    glBegin(GL_TRIANGLES);
-    for (protactinium=0; protactinium<totalfacet; protactinium++)
-    {
-        neptunium = groupsize*protactinium;
-        glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
-                   trianglecoordinate.at(neptunium+2));
-        glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
-                   trianglecoordinate.at(neptunium+5));
-        glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
-                   trianglecoordinate.at(neptunium+8));
-    }
-    glEnd();
+    theFile.DrawFacets();
 
     glPopMatrix();
-
 
     glutSwapBuffers();
 }
