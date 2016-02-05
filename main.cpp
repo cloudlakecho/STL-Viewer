@@ -41,7 +41,8 @@ public:
         panz,
         viewx,
         viewy,
-        viewz
+        viewz,
+        solid
     };
 
     /// Construct menu
@@ -218,10 +219,15 @@ class cSTLFile
 {
 public:
 
+    cSTLFile()
+        : mySolidShowCount( -99 )
+    {
+
+    }
+
     void Open( const char* fname )
     {
-        myFacetCount = 0;
-        myVertexCount = 0;
+        Filename( fname );
         myF = fopen( fname, "r" );
     }
 
@@ -230,86 +236,53 @@ public:
         return myF;
     }
 
-    void Readfacets()
-    {
-        char linefromstandard[256];
-        float coordinatex, coordinatey, coordinatez;
-
-        if ( ! myF )
-        {
-            cout << "I couldn't find the file or file is empty." << endl;
-        }
-
-        fscanf(myF, "%s %s", linefromstandard, nameoffile);
-        cout << linefromstandard <<" "<< nameoffile << endl;
-
-        while((char) fgetc(myF)!='e')
-        {
-            fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
-                   &coordinatex, &coordinatey, &coordinatez);
-            myFacetCount++;
-            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-            normalvector.push_back(coordinatex);
-            normalvector.push_back(coordinatey);
-            normalvector.push_back(coordinatez);
-            fscanf(myF, "%s %s", linefromstandard, linefromstandard);
-            for (int n=0; n<3; n++)
-            {
-                fscanf(myF, "%s %f %f %f", linefromstandard,
-                       &coordinatex, &coordinatey, &coordinatez);
-                myVertexCount++;
-                /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
-                trianglecoordinate.push_back(coordinatex);
-                trianglecoordinate.push_back(coordinatey);
-                trianglecoordinate.push_back(coordinatez);
-            }
-            fscanf(myF, "%s", linefromstandard);
-            fscanf(myF, "%s", linefromstandard);
-
-            fgetc(myF);
-            if ((char) fgetc(myF)=='e')
-            {
-                // end of solid
-                fscanf(myF, "%s %s", linefromstandard, nameoffile);
-                //cout << linefromstandard <<" "<< nameoffile << endl;
-
-                // new solid
-                if( fscanf(myF, "%s %s", linefromstandard, nameoffile) != 2 )
-                    break;
-            }
-        }
-
-        fclose(myF);
-    }
+    /** Read triangular mesh from file */
+    void Readfacets();
 
     int FacetCount()
     {
         return myFacetCount;
     }
 
-    void DrawFacets()
+    void DrawFacets();
+
+    /** Show more or less solids as mousewheel turns
+
+    @param[in] direction
+
+    */
+    void Solid( int dir );
+
+    void Filename( const string& fn )
     {
-        int groupsize=9;
-        glBegin(GL_TRIANGLES);
-        for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
+        myfilename = fn;
+    }
+
+    void drawBitmapText()
+    {
+        if( mySolidCount == -99 )
+            return;
+        glDisable(GL_LIGHTING);
+        glColor3f( 1., 1., 1. );
+        glRasterPos2f(-250,0);
+
+        for( auto c : myLastSolidName )
         {
-            int neptunium = groupsize*protactinium;
-            glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
-                       trianglecoordinate.at(neptunium+2));
-            glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
-                       trianglecoordinate.at(neptunium+5));
-            glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
-                       trianglecoordinate.at(neptunium+8));
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
-        glEnd();
+        glEnable(GL_LIGHTING);
     }
 
 private:
+    string myfilename;
     FILE * myF;
     int myFacetCount;
     int myVertexCount;
+    int mySolidCount;       // number of solids in file
+    int mySolidShowCount;   // number of solids to show
     vector <float> normalvector;
     vector <float> trianglecoordinate;
+    string myLastSolidName;
 
 } theFile;
 
@@ -371,6 +344,9 @@ void mousewheel(int button, int dir, int x, int y)
     case cMenu::item::panz:
         theCamera.Pan( dir );
         break;
+    case cMenu::item::solid:
+        theFile.Solid( dir );
+        break;
     }
 }
 // called when the window change
@@ -420,6 +396,7 @@ void cMenu::Construct()
     glutAddMenuEntry( "Pan X", (int)item::panx );
     glutAddMenuEntry( "Pan Y", (int)item::pany );
     glutAddMenuEntry( "Pan Z", (int)item::panz );
+    glutAddMenuEntry( "Pack", (int)item::solid );
 }
 
 void cMenu::Do( item i )
@@ -436,6 +413,7 @@ void cMenu::Do( item i )
     case item::panx:
     case item::pany:
     case item::panz:
+    case item::solid:
 
         theMouseWheel.Mode( i );
         break;
@@ -443,8 +421,10 @@ void cMenu::Do( item i )
     case item::viewx:
     case item::viewy:
     case item::viewz:
+
         theCamera.setViewAlongAxis( i );
         break;
+
     }
 }
 
@@ -459,6 +439,124 @@ cCamera::cCamera()
 {
 
 }
+
+void cSTLFile::Solid( int dir )
+{
+    if( mySolidShowCount == -99 )
+    {
+        mySolidShowCount = mySolidCount;
+    }
+    mySolidShowCount += dir;
+    if( mySolidShowCount < 1 )
+        mySolidShowCount = 1;
+    if( mySolidShowCount > mySolidCount )
+        mySolidShowCount = mySolidCount;
+
+    //cout << "show " << mySolidShowCount << endl;
+
+    myF = fopen( myfilename.c_str(), "r" );
+    Readfacets();
+
+    glutPostRedisplay();
+}
+
+void cSTLFile::Readfacets()
+{
+
+    char linefromstandard[256];
+    float coordinatex, coordinatey, coordinatez;
+
+    if ( ! myF )
+    {
+        cout << "I couldn't find the file or file is empty." << endl;
+    }
+
+    int SolidCount = 0;
+    myFacetCount = 0;
+    myVertexCount = 0;
+    normalvector.clear();
+    trianglecoordinate.clear();
+
+    fscanf(myF, "%s %s", linefromstandard, nameoffile);
+    //cout << linefromstandard <<" "<< nameoffile << endl;
+
+    while((char) fgetc(myF)!='e')
+    {
+        fscanf(myF, "%s %s %f %f %f", linefromstandard, linefromstandard,
+               &coordinatex, &coordinatey, &coordinatez);
+        myFacetCount++;
+        //cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;
+        normalvector.push_back(coordinatex);
+        normalvector.push_back(coordinatey);
+        normalvector.push_back(coordinatez);
+        fscanf(myF, "%s %s", linefromstandard, linefromstandard);
+        for (int n=0; n<3; n++)
+        {
+            fscanf(myF, "%s %f %f %f", linefromstandard,
+                   &coordinatex, &coordinatey, &coordinatez);
+            myVertexCount++;
+            /*cout << coordinatex << " " << coordinatey << " " << coordinatez << endl;*/
+            trianglecoordinate.push_back(coordinatex);
+            trianglecoordinate.push_back(coordinatey);
+            trianglecoordinate.push_back(coordinatez);
+        }
+        fscanf(myF, "%s", linefromstandard);
+        fscanf(myF, "%s", linefromstandard);
+
+        fgetc(myF);
+        if ((char) fgetc(myF)=='e')
+        {
+            // end of solid
+            fscanf(myF, "%s %s", linefromstandard, nameoffile);
+
+            // check if we want to see any more
+            SolidCount++;
+            if( mySolidShowCount == -99 )
+            {
+                // we want to see every solid
+                mySolidCount = SolidCount;
+                myLastSolidName = "";
+            }
+            else
+            {
+                // limited solids to be shown
+                if( SolidCount == mySolidShowCount )
+                {
+                    cout << SolidCount << " solids, last " << nameoffile << endl;
+                    myLastSolidName = nameoffile;
+                    break;
+                }
+            }
+            //cout << linefromstandard <<" "<< mySolidCount<<" "<< nameoffile << endl;
+
+            // new solid
+            if( fscanf(myF, "%s %s", linefromstandard, nameoffile) != 2 )
+                break;
+        }
+    }
+
+    fclose(myF);
+}
+
+    void cSTLFile::DrawFacets()
+    {
+        int groupsize=9;
+        glBegin(GL_TRIANGLES);
+        for ( int protactinium=0; protactinium<myFacetCount; protactinium++)
+        {
+            int neptunium = groupsize*protactinium;
+            glVertex3f(trianglecoordinate.at(neptunium),trianglecoordinate.at(neptunium+1),
+                       trianglecoordinate.at(neptunium+2));
+            glVertex3f(trianglecoordinate.at(neptunium+3),trianglecoordinate.at(neptunium+4),
+                       trianglecoordinate.at(neptunium+5));
+            glVertex3f(trianglecoordinate.at(neptunium+6),trianglecoordinate.at(neptunium+7),
+                       trianglecoordinate.at(neptunium+8));
+        }
+        glEnd();
+
+        drawBitmapText();
+    }
+
 
 int main(int argc, char* argv[])
 {
