@@ -78,6 +78,10 @@ public:
     {
         return myMode;
     }
+
+    /// Called when mousewheel moves
+    void Do (int dir );
+
 } theMouseWheel;
 
 
@@ -114,10 +118,10 @@ public:
     {
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        gluPerspective (50.0*myZoom, myRatio, 10, 2000);
+        gluPerspective (50.0, myRatio, 10, 200000);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        gluLookAt( 0, -1000, 0,
+        gluLookAt( 0, -1000*myZoom, 0,
                    myPanX, myPanY, myPanZ,
                    0, 0, 1 );
     }
@@ -249,16 +253,6 @@ public:
 
     }
 
-    void Open( )
-    {
-        myF = fopen( myfilename.c_str(), "r" );
-    }
-
-    FILE * file()
-    {
-        return myF;
-    }
-
     /** Read triangular mesh from file */
     void Readfacets();
 
@@ -289,7 +283,7 @@ private:
     int myFacetCount;
     int myVertexCount;
     int mySolidCount;       // number of solids in file
-    int mySolidShowCount;   // number of solids to show
+    int mySolidShowCount;   // number of solids to show, -99 show them all
     string myLastSolidName;
     vector < cFacet > myFacets;
     vector < cFacet > myBinFacets;
@@ -339,25 +333,7 @@ public:
 // called when mousewheel is turned
 void mousewheel(int button, int dir, int x, int y)
 {
-    switch( theMouseWheel.myMode )
-    {
-    case cMenu::item::zoom:
-        theCamera.Zoom( dir );
-        break;
-    case cMenu::item::spinx:
-    case cMenu::item::spiny:
-    case cMenu::item::spinz:
-        theCamera.setSpin( dir );
-        break;
-    case cMenu::item::panx:
-    case cMenu::item::pany:
-    case cMenu::item::panz:
-        theCamera.Pan( dir );
-        break;
-    case cMenu::item::solid:
-        theFile.Solid( dir );
-        break;
-    }
+    theMouseWheel.Do( dir );
 }
 // called when the window change
 void ChangeSize(GLsizei w, GLsizei h)
@@ -438,6 +414,31 @@ void cMenu::Do( item i )
     }
 }
 
+void cMouseWheel::Do (int dir )
+{
+    //cout << (int)myMode << endl;
+
+    switch( myMode )
+    {
+    case cMenu::item::zoom:
+        theCamera.Zoom( dir );
+        break;
+    case cMenu::item::spinx:
+    case cMenu::item::spiny:
+    case cMenu::item::spinz:
+        theCamera.setSpin( dir );
+        break;
+    case cMenu::item::panx:
+    case cMenu::item::pany:
+    case cMenu::item::panz:
+        theCamera.Pan( dir );
+        break;
+    case cMenu::item::solid:
+        theFile.Solid( dir );
+        break;
+    }
+}
+
 cCamera::cCamera()
     : myZoom( 1 )
     , mySpinX( 45 )
@@ -464,7 +465,6 @@ void cSTLFile::Solid( int dir )
 
     //cout << "show " << mySolidShowCount << endl;
 
-    myF = fopen( myfilename.c_str(), "r" );
     Readfacets();
 
     glutPostRedisplay();
@@ -498,6 +498,7 @@ void cSTLFile::Readfacets()
     char linefromstandard[256];
     float coordinatex, coordinatey, coordinatez;
 
+    myF = fopen( myfilename.c_str(), "r" );
     if ( ! myF )
     {
         cout << "I couldn't find the file or file is empty." << endl;
@@ -708,8 +709,6 @@ void RenderScene()
     // read mesh from file, if not already done
     if( ! theFile.FacetCount() )
     {
-        theFile.Open( );
-
         theFile.Readfacets();
     }
 
