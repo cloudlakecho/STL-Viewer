@@ -181,8 +181,8 @@ public:
             mySpinY = 0;
             mySpinZ = 0;
             break;
-
         }
+        glutPostRedisplay();
     }
 
     void Pan(  int dir )
@@ -440,11 +440,11 @@ void cMouseWheel::Do (int dir )
 }
 
 cCamera::cCamera()
-    : myZoom( 1 )
+    : myZoom( 2 )
     , mySpinX( 45 )
     , mySpinY( 45 )
     , mySpinZ( 45 )
-    , myPanX( 0 )
+    , myPanX( 300 )
     , myPanY( 0 )
     , myPanZ( 0 )
 {
@@ -648,6 +648,11 @@ void cSTLFile::DrawText()
 }
 int main(int argc, char* argv[])
 {
+    if( argc != 2 )
+    {
+        cout << "Usage: stlviewer <stl file name>";
+        exit(1);
+    }
     theFile.Filename( argv[1] );
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
